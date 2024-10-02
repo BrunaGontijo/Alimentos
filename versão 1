@@ -1,0 +1,99 @@
+import tkinter as tk 
+from tkinter import ttk, messagebox
+import mysql.connector 
+from mysql.connector import Error
+
+class AlimentosApp:
+    def __init__(self,root):
+        self.root = root 
+        self.root.geometry("700x700")
+
+        # connectar ao banco de dados 
+        self.conn = self.criar_conexao()
+        if not self.conn:
+            messagebox.showerror("Erro", "Não foi possivel conectar ao banco de dados")
+            self.root.destroy()
+            return
+        # Criar a interface gráfica
+        self.criar_widgets()
+        self.carregar_alimentos()
+    def criar_conexao(self):
+        try:
+            conn= mysql.connector.connect(
+                host='localhost'
+                user='root'
+                password='acesso123'
+                database='dietas'   
+            ) 
+            return conn
+        except Error as e:
+             messagebox.showerror("Erro", f'Erro ao conectar ao banco de dados:{e}')
+             return None
+    def criar_widget(self):
+    # Labels e campos de entrada 
+     labels = ['id','nome','calorias','proteinas','carboidratos','gordura']
+     self.entries = {}
+     for i, label in enumerate(labels):
+         tk.Label(self.root, text=label).grid(row=i, column=0, pady=5,padx=5, sticky='e')
+         entry= tk.Entry(self.root)
+         entry.grid(row=i, column=1, pady=5, padx=5, sticky='w')
+         self.entries[label.lower()] = entry 
+         # Botões 
+         ttk.Button(self.root, text='adicionar alimento', command=self.adicionar_alimentos).grid(row=7, column=1,pady=10)
+         ttk.Button(self.root, text='editar alimento', command=self.editar_alimentos).grid(row=7, column=1, pady=10)
+         ttk.Button(self.root, text='excluir alimento',command=self.excluir_livro).grid(row=7, column=2,pady=10)
+         # treeview para exibir os livros 
+         self.tree = ttk.Treeview(self.root, column=labels, show='headings')
+         for label in labels:
+             self.tree.headings(label.lower(),text=label)
+             self.tree.column(label.lower(),width=100)
+             self.tree.grid(row=8, column=0, columnspan=3, pady=20)
+             # Evento seleção da treeview
+    def carregar_alimentos(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        try:
+                cursor = self.conn.cursor()
+                cursor.execute("SELECT * FROM alimentos")
+                for row in cursor.fecthall():
+                    self.tree.insert('', tk.END, values=row)
+                    cursor.close()
+        except Error  as e:
+         messagebox.showerror("erro", f"Erro ao carregar os alimentos:{e}")
+    def adicionar_alimentos(self):
+        dados = {key:entry.get() for key, entry in self.entries.items()}
+        if not all(dados.values()):
+            messagebox.showerror("erro" "todos os campos devem ser preenchidos")
+            return
+        try:
+            cursor=self.conn.cursor()
+            cursor.execute("INSERT INTO  alimentos(id,nome,calorias,proteinas,carboidratos,gordura) VALUES (%s,%s,%s,,%s,%s,%s,%s)", dados ['id'], dados['nome'], dados['calorias'], dados['proteinas'], dados['carboidratos'], dados['gordura'])
+            self.conn.commit()
+            cursor.close
+            messagebox.showinfo("sucesso","alimento adicionado")
+        except Error as e:
+            messagebox.showerror("Erro", f'Erro ao adicionar alimento:{e}')
+            
+    def selecionar_dieta(self, event):
+        selected_item =self.tree.focus()
+        if selected_item:
+            
+            valores = self.tree.item(selected_item, 'values')
+            for i, key in enumerate(self.entries.keys()):
+                self.entries[key].delete(0, tk.END)
+                self.entries[key].insert(0,valores[i])
+                def editar_alimentos(self):
+                    selected_item = self.tree.focus()
+                    if not selected_item:
+                        messagebox.showerror("erro", "nenhum alimento selecionado")
+                        return
+                    dados={key:entry.get() for key, entry in self.entries.items()}
+                    if not all(dados.values)
+                    messagebox.showerror("Erro", "Todos os campos devem ser preenchidos")
+                    return 
+                try:
+                    cursor = self.conn.cursor()
+                    cursor.execute(
+                        "UPDATE alimentos SET "
+                    )
+                    
