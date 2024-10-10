@@ -1,0 +1,215 @@
+import tkinter as tk
+from tkinter import messagebox
+import mysql.connector
+from mysql.connector import Error
+
+class CadastroApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Cadastro de Pacientes")
+        self.root.geometry("400x600")
+
+        # Campos de entrada para os dados da tabela pacientes
+        self.label_nome = tk.Label(self.root, text="Nome:")
+        self.label_nome.pack(pady=5)
+        self.nome_entry = tk.Entry(self.root)
+        self.nome_entry.pack(pady=5)
+
+        self.label_idade = tk.Label(self.root, text="Idade:")
+        self.label_idade.pack(pady=5)
+        self.idade_entry = tk.Entry(self.root)
+        self.idade_entry.pack(pady=5)
+
+        self.label_altura = tk.Label(self.root, text="Altura:")
+        self.label_altura.pack(pady=5)
+        self.altura_entry = tk.Entry(self.root)
+        self.altura_entry.pack(pady=5)
+
+        self.label_peso = tk.Label(self.root, text="Peso:")
+        self.label_peso.pack(pady=5)
+        self.peso_entry = tk.Entry(self.root)
+        self.peso_entry.pack(pady=5)
+
+        self.label_intolerancia = tk.Label(self.root, text="Intolerância:")
+        self.label_intolerancia.pack(pady=5)
+        self.intolerancia_entry = tk.Entry(self.root)
+        self.intolerancia_entry.pack(pady=5)
+
+        self.label_medicamentos = tk.Label(self.root, text="Medicamentos:")
+        self.label_medicamentos.pack(pady=5)
+        self.medicamentos_entry = tk.Entry(self.root)
+        self.medicamentos_entry.pack(pady=5)
+
+        self.label_historico = tk.Label(self.root, text="Histórico:")
+        self.label_historico.pack(pady=5)
+        self.historico_entry = tk.Entry(self.root)
+        self.historico_entry.pack(pady=5)
+
+        self.label_email = tk.Label(self.root, text="Email:")
+        self.label_email.pack(pady=5)
+        self.email_entry = tk.Entry(self.root)
+        self.email_entry.pack(pady=5)
+
+        self.label_telefone = tk.Label(self.root, text="Telefone:")
+        self.label_telefone.pack(pady=5)
+        self.telefone_entry = tk.Entry(self.root)
+        self.telefone_entry.pack(pady=5)
+
+        # Botões para gravar, editar e excluir
+        self.gravar_button = tk.Button(self.root, text="Gravar", command=self.gravar_dados)
+        self.gravar_button.pack(pady=5)
+
+        self.editar_button = tk.Button(self.root, text="Editar", command=self.editar_dados)
+        self.editar_button.pack(pady=5)
+
+        self.excluir_button = tk.Button(self.root, text="Excluir", command=self.excluir_dados)
+        self.excluir_button.pack(pady=5)
+
+        # Lista para exibir registros
+        self.lista_dados = tk.Listbox(self.root)
+        self.lista_dados.pack(pady=10)
+        self.lista_dados.bind("<<ListboxSelect>>", self.selecionar_dado)
+
+        # Conexão com o banco de dados
+        self.conn = self.criar_conexao()
+        if self.conn:
+            self.carregar_dados()
+
+    def criar_conexao(self):
+        try:
+            conn = mysql.connector.connect(
+                host='localhost',
+                user='root',
+                password='acesso123',
+                database='cadastro'
+            )
+            return conn
+        except Error as e:
+            messagebox.showerror("Erro", f'Erro ao conectar ao banco de dados: {e}')
+            self.root.destroy()
+            return None
+
+    def carregar_dados(self):
+        """Carrega os registros do banco de dados para a lista."""
+        if not self.conn:
+            return
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT idpacientes, nome, idade, altura, peso, intolerancia, medicamentos, historico, email, telefone FROM pacientes")
+            resultados = cursor.fetchall()
+            self.lista_dados.delete(0, tk.END)  # Limpa a lista
+            for row in resultados:
+                self.lista_dados.insert(tk.END, row)  # Adiciona registro à lista
+            cursor.close()
+        except Error as e:
+            messagebox.showerror("Erro", f'Erro ao carregar dados: {e}')
+
+    def gravar_dados(self):
+        dados = (self.nome_entry.get(), self.idade_entry.get(), self.altura_entry.get(),
+                 self.peso_entry.get(), self.intolerancia_entry.get(), self.medicamentos_entry.get(),
+                 self.historico_entry.get(), self.email_entry.get(), self.telefone_entry.get())
+
+        if all(dados):
+            try:
+                cursor = self.conn.cursor()
+                sql = "INSERT INTO pacientes (nome, idade, altura, peso, intolerancia, medicamentos, historico, email, telefone) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                cursor.execute(sql, dados)
+                self.conn.commit()
+                cursor.close()
+                messagebox.showinfo("Sucesso", "Dados gravados com sucesso!")
+                self.limpar_entradas()
+                self.carregar_dados()
+            except Error as e:
+                messagebox.showerror("Erro", f'Erro ao gravar dados: {e}')
+        else:
+            messagebox.showwarning("Atenção", "Todos os campos devem estar preenchidos.")
+
+    def editar_dados(self):
+        if hasattr(self, 'selected_id'):
+            dados = (self.nome_entry.get(), self.idade_entry.get(), self.altura_entry.get(),
+                     self.peso_entry.get(), self.intolerancia_entry.get(), self.medicamentos_entry.get(),
+                     self.historico_entry.get(), self.email_entry.get(), self.telefone_entry.get(), self.selected_id)
+
+            if all(dados[:-1]):
+                try:
+                    cursor = self.conn.cursor()
+                    sql = "UPDATE pacientes SET nome = %s, idade = %s, altura = %s, peso = %s, intolerancia = %s, medicamentos = %s, historico = %s, email = %s, telefone = %s WHERE idpacientes = %s"
+                    cursor.execute(sql, dados)
+                    self.conn.commit()
+                    cursor.close()
+                    messagebox.showinfo("Sucesso", "Dados editados com sucesso!")
+                    self.limpar_entradas()
+                    self.carregar_dados()
+                except Error as e:
+                    messagebox.showerror("Erro", f'Erro ao editar dados: {e}')
+            else:
+                messagebox.showwarning("Atenção", "Todos os campos devem estar preenchidos para editar.")
+        else:
+            messagebox.showwarning("Atenção", "Selecione um registro para editar.")
+
+    def excluir_dados(self):
+        if hasattr(self, 'selected_id'):
+            try:
+                cursor = self.conn.cursor()
+                sql = "DELETE FROM pacientes WHERE idpacientes = %s"
+                cursor.execute(sql, (self.selected_id,))
+                self.conn.commit()
+                cursor.close()
+                messagebox.showinfo("Sucesso", "Dados excluídos com sucesso!")
+                self.limpar_entradas()
+                self.carregar_dados()
+            except Error as e:
+                messagebox.showerror("Erro", f'Erro ao excluir dados: {e}')
+        else:
+            messagebox.showwarning("Atenção", "Selecione um registro para excluir.")
+
+    def selecionar_dado(self, event):
+        """Carrega o registro selecionado na lista para os campos de entrada."""
+        try:
+            selection = self.lista_dados.curselection()
+            if selection:
+                index = selection[0]
+                registro = self.lista_dados.get(index)
+                self.selected_id = registro[0]
+                self.nome_entry.delete(0, tk.END)
+                self.nome_entry.insert(0, registro[1])
+                self.idade_entry.delete(0, tk.END)
+                self.idade_entry.insert(0, registro[2])
+                self.altura_entry.delete(0, tk.END)
+                self.altura_entry.insert(0, registro[3])
+                self.peso_entry.delete(0, tk.END)
+                self.peso_entry.insert(0, registro[4])
+                self.intolerancia_entry.delete(0, tk.END)
+                self.intolerancia_entry.insert(0, registro[5])
+                self.medicamentos_entry.delete(0, tk.END)
+                self.medicamentos_entry.insert(0, registro[6])
+                self.historico_entry.delete(0, tk.END)
+                self.historico_entry.insert(0, registro[7])
+                self.email_entry.delete(0, tk.END)
+                self.email_entry.insert(0, registro[8])
+                self.telefone_entry.delete(0, tk.END)
+                self.telefone_entry.insert(0, registro[9])
+        except Exception as e:
+            messagebox.showerror("Erro", f'Erro ao selecionar dado: {e}')
+
+    def limpar_entradas(self):
+        """Limpa todos os campos de entrada."""
+        self.nome_entry.delete(0, tk.END)
+        self.idade_entry.delete(0, tk.END)
+        self.altura_entry.delete(0, tk.END)
+        self.peso_entry.delete(0, tk.END)
+        self.intolerancia_entry.delete(0, tk.END)
+        self.medicamentos_entry.delete(0, tk.END)
+        self.historico_entry.delete(0, tk.END)
+        self.email_entry.delete(0, tk.END)
+        self.telefone_entry.delete(0, tk.END)
+
+    def fechar_conexao(self):
+        if self.conn:
+            self.conn.close()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = CadastroApp(root)
+    root.protocol("WM_DELETE_WINDOW", app.fechar_conexao)
+    root.mainloop()
